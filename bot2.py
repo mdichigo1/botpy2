@@ -11,9 +11,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from telegram.request import HTTPXRequest
 
-# =========================
-# CONFIG
-# =========================
+
 BOT_TOKEN = "8714374090:AAGuK9h8anhvZ-xU1zvHPeOZDNExPgIdWW4"
 API_KEY = "7H1ybsFext1ELWWa3dMdL52SCdsoPbMnN4Lngurs2oGYBr3wAj3YwT2LkIupiU06"
 API_SECRET = "uBTcVPicuUlyezym37Xu0FY7B8DucMCGNSN7LdiJWPA1PRZuQ8cuVka5l6sGw6Hd"
@@ -27,10 +25,8 @@ STOP_LOSS_PCT = 0.01       # 1%
 TAKE_PROFIT_PCT = 0.02     # 2%
 LOOP_SECONDS = 5
 
-# Easier EMA for testing
 EMA_RELAX = 0.98
 
-# Levels format: buy_rsi, sell_rsi, margin_usdt
 LEVELS: List[Dict[str, float]] = [
     {"buy": 45, "sell": 55, "size": 100},
     {"buy": 35, "sell": 60, "size": 50},
@@ -40,7 +36,6 @@ LEVELS: List[Dict[str, float]] = [
 AUTHORIZED_CHAT_ID: Optional[int] = None
 AUTO_ON = False
 
-# Local tracking
 triggered_levels = set()
 open_legs: List[Dict[str, Any]] = []
 trade_history: List[Dict[str, Any]] = []
@@ -48,16 +43,13 @@ realized_pnl = 0.0
 wins = 0
 losses = 0
 
-# Cached market data
 last_price: Optional[float] = None
 last_rsi: Optional[float] = None
 last_ema: Optional[float] = None
 last_msg_ts = 0.0
 
 
-# =========================
-# HTTP HELPERS
-# =========================
+
 def _sign(params: Dict[str, Any]) -> str:
     qs = urlencode(params, doseq=True)
     return hmac.new(API_SECRET.encode(), qs.encode(), hashlib.sha256).hexdigest()
@@ -102,9 +94,6 @@ async def signed_post(path: str, params: Optional[Dict[str, Any]] = None):
     return await asyncio.to_thread(_request, "POST", path, params, True)
 
 
-# =========================
-# TELEGRAM HELPERS
-# =========================
 def is_authorized(update: Update) -> bool:
     return AUTHORIZED_CHAT_ID is not None and update.effective_chat and update.effective_chat.id == AUTHORIZED_CHAT_ID
 
@@ -127,9 +116,6 @@ async def safe_send(context: ContextTypes.DEFAULT_TYPE, text: str) -> None:
             await asyncio.sleep(1)
 
 
-# =========================
-# BINANCE HELPERS
-# =========================
 async def set_leverage(symbol: str, leverage: int) -> None:
     await signed_post("/fapi/v1/leverage", {"symbol": symbol, "leverage": leverage})
 
@@ -188,9 +174,7 @@ async def fetch_klines(symbol: str, interval: str, limit: int = 100) -> pd.DataF
     return df
 
 
-# =========================
-# STRATEGY HELPERS
-# =========================
+
 def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
     delta = df["close"].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
@@ -307,9 +291,7 @@ async def maybe_close_legs(context: ContextTypes.DEFAULT_TYPE, price: float, rsi
     open_legs[:] = remaining
 
 
-# =========================
-# AUTO LOOP
-# =========================
+
 async def auto_signal(context: ContextTypes.DEFAULT_TYPE):
     global last_price, last_rsi, last_ema
 
@@ -345,9 +327,6 @@ async def auto_signal(context: ContextTypes.DEFAULT_TYPE):
         print("auto_signal error:", e)
 
 
-# =========================
-# COMMANDS
-# =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global AUTHORIZED_CHAT_ID
     AUTHORIZED_CHAT_ID = update.effective_chat.id
@@ -459,9 +438,7 @@ async def setlevels(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Usage:\n/setlevels 45 55 100 35 60 50 25 70 25")
 
 
-# =========================
-# APP
-# =========================
+
 request = HTTPXRequest(
     connect_timeout=15,
     read_timeout=15,
@@ -483,5 +460,5 @@ app.add_handler(CommandHandler("setlevels", setlevels))
 app.job_queue.run_repeating(auto_signal, interval=LOOP_SECONDS, first=3)
 
 if __name__ == "__main__":
-    print("⚡ Binance demo futures leveraged bot running...")
+    print(" Binance demo futures leve bot running...")
     app.run_polling()
